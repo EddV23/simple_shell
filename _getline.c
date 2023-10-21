@@ -1,44 +1,86 @@
 #include "shell.h"
 
-#define BUFFER_SIZE 1024
+/**
+ * clear_stdin_buffer - clears the standard input buffer
+ *
+ * Return: void
+ */
+void clear_stdin_buffer(void)
+{
+	fflush(stdin);
+}
 
 /**
- * _getline - reads an entire line from a file descriptor
- * @fd: file descriptor
+ * hd_hash - handle contents after hash
+ * @n: the input buffer
  *
- * Return: the number of characters read or -1 on failure
+ * Return:void
  */
-char *_getline(const int fd)
+void hd_hash(char *n)
 {
-	static char buffer[BUFFER_SIZE];
-	static char line[BUFFER_SIZE];
-	static size_t pos;
-	static size_t len;
+	int i = 0;
 
-	size_t i = 0;
-	char c;
-
-	while (1)
+	while (n[i] != '\0')
 	{
-		if (pos == len)
+		if (n[i] == '#')
 		{
-			pos = 0;
-			len = read(fd, buffer, BUFFER_SIZE);
-			if (len == 0)
-			{
-				if (i == 0)
-					return (NULL);
-				break;
-			}
-			if (len == (size_t)-1)
+			n[i] = '\0';
+			break;
+		}
+		i++;
+	}
+}
+
+/**
+ * _getline - reads an entire line from a standard input
+ *
+ * Return: character
+ */
+char *_getline(void)
+{
+	int i, size = BUFFER_SIZE, len;
+	char *buf = malloc(size), c = 0;
+
+	if (buf == NULL)
+	{
+		free(buf);
+		return (NULL);
+	}
+	for (i = 0; c != EOF && c != '\n'; i++)
+	{
+		clear_stdin_buffer();
+		len = read(STDIN_FILENO, &c, 1);
+		if (len == 0)
+		{
+			free(buf);
+			exit(EXIT_SUCCESS);
+		}
+		buf[i] = c;
+		if (buf[0] == '\n')
+		{
+			free(buf);
+			return ("\0");
+		}
+		if (i >= size)
+		{
+			buf = mem_realloc(buf, size, size + 1);
+			if (buf == NULL)
 				return (NULL);
 		}
-
-		c = buffer[pos++];
-		line[i++] = c;
-		if (c == '\n')
-			break;
 	}
-	line[i] = '\0';
-	return (line);
+	buf[i] = '\0';
+	hd_hash(buf);
+	return (buf);
+}
+
+/**
+ * signal_handler - handles the interupt signal
+ * @s: signal to be handled
+ *
+ * Return: void
+ */
+void signal_handler(int s)
+{
+	if (s == SIGINT)
+		_printf("\n#cisfun$ ");
 }

@@ -1,56 +1,50 @@
 #include "shell.h"
 
 /**
- * clear_stdin_buffer - clears the standard input buffer
- *
- * Return: void
- */
-void clear_stdin_buffer(void)
-{
-	fflush(stdin);
-}
-
-/**
  * main - Entry point, runs the simple shell
  * @ac: argument count
  * @av: arguments vector
- * @ev: pointer to array of environmental variables
  *
  * Return: Always 0 (Success)
  */
-int main(int __attribute__((__unused__)) ac, char *av[], char *ev[])
+int main(int ac, char *av[])
 {
-	int i = 0;
-	size_t bytes = 0;
-	ssize_t bytes_read = 0;
-	char *buf = NULL, **cmd = NULL, *home = getenv("HOME"), *prev_dir = NULL;
+	int i = 0, stt = 0;
+	char *buf, **tok;
 
-	for (i = 0; 1; i++)
+	(void)ac;
+
+	if (av[1] != NULL)
+		file_r(av[1], av);
+	signal(SIGINT, signal_handler);
+	while (1)
 	{
-		cmd_prompt();
-		signal(SIGINT, signal_handler);
-		bytes_read = getline(&buf, &bytes, stdin);
-		if (*buf == '\n')
-			free(buf);
-		else if (bytes_read == EOF)
-			end_of_file(buf);
-		else
+		i++;
+		if (isatty(STDIN_FILENO))
+			cmd_prompt();
+		buf = _getline();
+		/*print("Received input: %s\n", (buf != NULL) ? buf : "NULL");*/
+		/*if (buf == NULL || buf[0] == '\0')*/
+		if (buf[0] == '\0')
 		{
-			buf[_strlen(buf) - 1] = '\0';
-			cmd = create_str_cmd(buf, " \0");
-			free(buf);
-			if (_strcmp(cmd[0], "cd") != 0)
-				cwd(cmd[1], &prev_dir, home);
-			/*(cwd(cmd[1]);*/
-			else if (_strcmp(cmd[0], "exit") != 0)
-				quit_shell(cmd);
-			else
-				child_proc(cmd, av[0], ev, i);
+			/*if (buf != NULL)*/
+			/*free(buf);*/
+			/*print("Empty input detected. Skipping...\n");*/
+			continue;
 		}
-		buf = NULL, bytes = 0;
-		clear_stdin_buffer();
+		my_hist(buf);
+		tok = crt_token(buf);
+		if (_strcmp(tok[0], "exit") == 0)
+			quit_shell(tok, buf, av, i);
+		else if (builtin_ch(tok) == 0)
+		{
+			stt = builtin_hd(tok, stt);
+			mem_clear(tok, buf);
+			continue;
+		}
+		else
+			stt = child_proc(tok, buf, i, av);
+		mem_clear(tok, buf);
 	}
-	if (bytes_read == -1)
-		return (EXIT_FAILURE);
-	return (EXIT_SUCCESS);
+	return (1);
 }
